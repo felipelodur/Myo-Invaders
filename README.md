@@ -1,4 +1,4 @@
-# Space-Invaders-with-Myo-and-Voice-Recognition
+# Myo Invaders
 Implementation of Space Invaders using Myo Armband to control movement and Voice Recognition to trigger special events.
 
 ## Commands
