@@ -7,13 +7,18 @@ import time
 from pygame import *
 import sys
 from random import shuffle, randrange, choice
+import speech_recognition as sr
 
 # Movement and Actions
 isRight = False
 isLeft = False
 isFiring = False
 
-# 		   R    G    B
+# updatedWithVoiceListener
+letsStart = False
+letsReload = False
+
+# (	Red, Green, Blue )
 WHITE 	= (255, 255, 255)
 GREEN 	= (78, 255, 87)
 YELLOW 	= (241, 255, 0)
@@ -28,6 +33,7 @@ IMG_NAMES 	= ["ship", "ship", "mystery", "enemy1_1", "enemy1_2", "enemy2_1", "en
 				"enemy3_1", "enemy3_2", "explosionblue", "explosiongreen", "explosionpurple", "laser", "enemylaser"]
 IMAGES 		= {name: image.load("images/{}.png".format(name)).convert_alpha()
 				for name in IMG_NAMES}
+
 
 class Listener(libmyo.DeviceListener):
 
@@ -464,7 +470,7 @@ class SpaceInvaders(object):
 
 	def create_text(self):
 		self.titleText = Text(FONT, 50, "Space Invaders", WHITE, 164, 155)
-		self.titleText2 = Text(FONT, 25, "Press any key"    , WHITE, 201, 225)
+		self.titleText2 = Text(FONT, 25, "Say hello to start the game!", WHITE, 195, 225)
 		self.gameOverText = Text(FONT, 50, "Game Over", WHITE, 250, 270)
 		self.nextRoundText = Text(FONT, 50, "Next Round", WHITE, 240, 270)
 		self.enemy1Text = Text(FONT, 25, "   =   10 pts", GREEN, 368, 270)
@@ -480,22 +486,21 @@ class SpaceInvaders(object):
 		for e in event.get():
 			if e.type == QUIT:
 				sys.exit()
-		#print (isFiring)
+
 		if isFiring:
-			if isFiring:
-				if len(self.bullets) == 0 and self.shipAlive:
-					if self.score < 1000:
-						bullet = Bullet(self.player.rect.x+23, self.player.rect.y+5, -1, 15, "laser", "center")
-						self.bullets.add(bullet)
-						self.allSprites.add(self.bullets)
-						self.sounds["shoot"].play()
-					else:
-						leftbullet = Bullet(self.player.rect.x+8, self.player.rect.y+5, -1, 15, "laser", "left")
-						rightbullet = Bullet(self.player.rect.x+38, self.player.rect.y+5, -1, 15, "laser", "right")
-						self.bullets.add(leftbullet)
-						self.bullets.add(rightbullet)
-						self.allSprites.add(self.bullets)
-						self.sounds["shoot2"].play()
+			if len(self.bullets) == 0 and self.shipAlive:
+				if self.score < 1000:
+					bullet = Bullet(self.player.rect.x+23, self.player.rect.y+5, -1, 15, "laser", "center")
+					self.bullets.add(bullet)
+					self.allSprites.add(self.bullets)
+					self.sounds["shoot"].play()
+				else:
+					leftbullet = Bullet(self.player.rect.x+8, self.player.rect.y+5, -1, 15, "laser", "left")
+					rightbullet = Bullet(self.player.rect.x+38, self.player.rect.y+5, -1, 15, "laser", "right")
+					self.bullets.add(leftbullet)
+					self.bullets.add(rightbullet)
+					self.allSprites.add(self.bullets)
+					self.sounds["shoot2"].play()
 
 	def make_enemies(self):
 		enemies = sprite.Group()
@@ -546,6 +551,8 @@ class SpaceInvaders(object):
 		return score
 
 	def create_main_menu(self):
+		global letsStart
+
 		self.enemy1 = IMAGES["enemy3_1"]
 		self.enemy1 = transform.scale(self.enemy1 , (40, 40))
 		self.enemy2 = IMAGES["enemy2_2"]
@@ -565,6 +572,11 @@ class SpaceInvaders(object):
 			if e.type == KEYUP:
 				self.startGame = True
 				self.mainScreen = False
+
+		if letsStart== True:
+			letsStart = False
+			self.startGame = True
+			self.mainScreen = False
 	
 	def update_enemy_speed(self):
 		if len(self.enemies) <= 10:
@@ -730,6 +742,28 @@ class SpaceInvaders(object):
 			display.update()
 			self.clock.tick(60)
 				
+def callback(recognizer, audio):
+	global letsStart
+	global letsReload
+
+	# received audio data, now we'll recognize it using Google Speech Recognition
+	print("Ready to start listening")
+	try:
+		recognized = recognizer.recognize_google(audio)
+		print("Google Speech Recognition thinks you said " + recognized)
+		
+		if ("hello" in recognized.lower()):
+			letsStart = True
+			print("Game should start, have fun!")
+
+		if (recognized.lower() == "reload"):
+			letsReload = True
+
+	except sr.UnknownValueError:
+		print("Google Speech Recognition could not understand audio")
+	except sr.RequestError as e:
+		print("Could not request results from Google Speech Recognition service; {0}".format(e))
+
 
 if __name__ == '__main__':
 	print("Connecting to Myo ... Use CTRL^C to exit.")
@@ -738,7 +772,16 @@ if __name__ == '__main__':
 	except MemoryError:
 		print("Myo Hub could not be created. Make sure Myo Connect is running.")
 
-	# Hub Configuration
+	# Voice Listener will run on a separate thread on background.
+	r = sr.Recognizer()
+	m = sr.Microphone()
+	with m as source:
+		r.adjust_for_ambient_noise(source)  # we only need to calibrate once, before we start listening
+
+	# start listening in the background
+	stop_listening = r.listen_in_background(m, callback)
+
+	# Hub Configuration. Myo Listener will run on separate thread on background.
 	hub.set_locking_policy(libmyo.LockingPolicy.none)
 	hub.run(1000, Listener())
 
@@ -755,4 +798,6 @@ if __name__ == '__main__':
 	finally:
 		print("Shutting down hub...")
 		hub.shutdown() # Crucial
+		stop_listening()  # calling this function requests that the background listener stop listening
+
 	
