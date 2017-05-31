@@ -2,9 +2,9 @@
 Implementation of Space Invaders using Myo Armband to control movement and Voice Recognition to trigger special events.
 
 ## Commands
-- **Steer** your arm Left or Right for horizontal movement.
+- **Move** your arm Up or Down for movement control.
 - **Fist** pose to fire.
-- **Say** Hello to start the game.
+- **Say**: *Hello* to start the game. *Life* to restore lifes. *Reset* to reset the game.
 
 ## Devices required
 - *Myo Armband*: https://www.myo.com/
