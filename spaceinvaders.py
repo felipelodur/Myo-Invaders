@@ -17,6 +17,7 @@ isFiring = False
 # updatedWithVoiceListener
 letsStart = False
 letsReload = False
+resetLife = False
 
 # (	Red, Green, Blue )
 WHITE 	= (255, 255, 255)
@@ -61,8 +62,8 @@ class Listener(libmyo.DeviceListener):
         if self.emg:
             for comp in self.emg:
                 parts.append(str(comp).ljust(5))
-        print('\r' + ''.join('[{0}]'.format(p) for p in parts), end='')
-        sys.stdout.flush()
+        #print('\r' + ''.join('[{0}]'.format(p) for p in parts), end='')
+        #sys.stdout.flush()
 
     def on_connect(self, myo, timestamp, firmware_version):
         myo.vibrate('short')
@@ -741,10 +742,18 @@ class SpaceInvaders(object):
 
 			display.update()
 			self.clock.tick(60)
+
+			if ( letsReload == True ):
+				self.mainScreen = True
+				self.startGame = False
+
+			if ( resetLife == True ):
+				self.reset_lives()
 				
 def callback(recognizer, audio):
 	global letsStart
 	global letsReload
+	global resetLife
 
 	# received audio data, now we'll recognize it using Google Speech Recognition
 	print("Ready to start listening")
@@ -756,8 +765,12 @@ def callback(recognizer, audio):
 			letsStart = True
 			print("Game should start, have fun!")
 
-		if (recognized.lower() == "reload"):
+		if ("reset" in recognized.lower() ):
 			letsReload = True
+
+		if("life" in recognized.lower() ):
+			resetLife = True
+
 
 	except sr.UnknownValueError:
 		print("Google Speech Recognition could not understand audio")
